@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 )
@@ -10,11 +12,50 @@ var app App
 
 func TestMain(m *testing.M) {
 	app = App{}
+	// app.Initialize(
+	// 	os.Getenv("TEST_DB_USERNAME"),
+	// 	os.Getenv("TEST_DB_PASSWORD"),
+	// 	os.Getenv("TEST_DB_NAME"),
+	// )
 	app.Initialize(
-		os.Getenv("TEST_DB_USERNAME"),
-		os.Getenv("TEST_DB_PASSWORD"),
-		os.Getenv("TEST_DB_NAME"),
+		"postgres",
+		"docker",
+		"testgolangdb",
 	)
+
+	ensureTableExists()
+
+	code := m.Run()
+
+	clearTable()
+
+	os.Exit(code)
+}
+
+func TestEmptyTable(t *testing.T) {
+	clearTable()
+
+	req, _ := http.NewRequest("GET", "/products", nil)
+	response := executeRequest(req)
+
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	if body := response.Body.String(); body != "[]" {
+		t.Errorf("Expected an empty array. Got %s", body)
+	}
+}
+
+func executeRequest(req *http.Request) *httptest.ResponseRecorder {
+	rr := httptest.NewRecorder()
+	app.Router.ServeHTTP(rr, req)
+
+	return rr
+}
+
+func checkResponseCode(t *testing.T, expected int, actual int) {
+	if expected != actual {
+		t.Errorf("Expected response code %d. Got %d\n", expected, actual)
+	}
 }
 
 func ensureTableExists() {

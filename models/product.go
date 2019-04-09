@@ -17,5 +17,15 @@ func (product *Product) getProduct(db *sql.DB) error {
 }
 
 func getProducts(db *sql.DB, start, count int) ([]Product, error) {
-	return nil, errors.New("Not implemented")
+	rows, err := db.Query(
+		"SELECT id, name, price FROM products LIMIT $1 OFFSET $2",
+		count,
+		start,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
 }
